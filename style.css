@@ -1,0 +1,43 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+    user-select: none;
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+}
+
+#ui h1 {
+    margin: 0 0 10px 0;
+    font-size: 24px;
+}
+
+#score-board {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#game-over {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: white;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 30px;
+    border-radius: 10px;
+}
+
+#game-over h2 {
+    margin-top: 0;
+    color: #ff4500;
+    font-size: 32px;
+}
