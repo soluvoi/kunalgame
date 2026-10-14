@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subway Surfers Clone</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="ui">
+        <h1>Subway Runner</h1>
+        <div id="score-board">Score: <span id="score">0</span></div>
+    </div>
+    <div id="game-over">
+        <h2>Game Over</h2>
+        <p>Press R to Restart</p>
+    </div>
+
+    <!-- Three.js Library for 3D Graphics -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Game Variables
+        let scene, camera, renderer, player, track;
+        let obstacles = [];
+        let score = 0;
+        let isGameOver = false;
+        
+        // Lane positions (Left, Center, Right)
+        const lanes = [-2, 0, 2];
+        let currentLane = 1; // Start in center (index 1)
+        
+        // Movement controls
+        let targetX = 0;
+        let isJumping = false;
+        let jumpHeight = 0;
+        let jumpVelocity = 0;
+
+        function init() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x87ceeb); // Sky blue
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, 8);
+            camera.lookAt(0, 0, -5);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            directionalLight.position.set(0, 10, 5);
+            scene.add(directionalLight);
+
+            // Track (Ground)
+            const trackGeo = new THREE.PlaneGeometry(8, 200);
+            const trackMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            track = new THREE.Mesh(trackGeo, trackMat);
+            track.rotation.x = -Math.PI / 2;
+            track.position.z = -50;
+            scene.add(track);
+
+            // Player Setup (Simple Cube representing the Surfer)
+            const playerGeo = new THREE.BoxGeometry(0.8, 1.2, 0.8);
+            const playerMat = new THREE.MeshLambertMaterial({ color: 0xff4500 });
+            player = new THREE.Mesh(playerGeo, playerMat);
+            player.position.set(lanes[currentLane], 0.6, 0);
+            scene.add(player);
+
+            // Event Listeners for Controls
+            window.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Game Loop
+            animate();
+            
+            // Spawn Obstacles periodically
+            setInterval(spawnObstacle, 2000);
+        }
+
+        function handleKeyDown(e) {
+            if (isGameOver) {
+                if (e.key === 'r' || e.key === 'R') resetGame();
+                return;
+            }
+
+            if (e.key === 'ArrowLeft' && currentLane > 0) {
+                currentLane--;
+            } else if (e.key === 'ArrowRight' && currentLane < lanes.length - 1) {
+                currentLane++;
+            } else if ((e.key === 'ArrowUp' || e.key === ' ') && !isJumping) {
+                isJumping = true;
+                jumpVelocity = 0.25; // Jump strength
+            }
+        }
+
+        function spawnObstacle() {
+            if (isGameOver) return;
+
+            const laneIndex = Math.floor(Math.random() * 3);
+            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
+            const obsMat = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+            const obstacle = new THREE.Mesh(obsGeo, obsMat);
+            
+            obstacle.position.set(lanes[laneIndex], 0.5, -60);
+            scene.add(obstacle);
+            obstacles.push(obstacle);
+        }
+
+        function animate() {
+            if (!isGameOver) {
+                requestAnimationFrame(animate);
+
+                // Smooth lane switching
+                targetX = lanes[currentLane];
+                player.position.x += (targetX - player.position.x) * 0.2;
+
+                // Jump mechanics
+                if (isJumping) {
+                    player.position.y += jumpVelocity;
+                    jumpVelocity -= 0.015; // Gravity pull
+
+                    if (player.position.y <= 0.6) {
+                        player.position.y = 0.6;
+                        isJumping = false;
+                    }
+                }
+
+                // Move obstacles towards player
+                for (let i = obstacles.length - 1; i >= 0; i--) {
+                    obstacles[i].position.z += 0.6; // Speed of the game
+
+                    // Collision Detection (Simple bounding box check)
+                    if (Math.abs(player.position.z - obstacles[i].position.z) < 0.8 &&
+                        Math.abs(player.position.x - obstacles[i].position.x) < 0.8 &&
+                        player.position.y < 1.2) {
+                        gameOver();
+                    }
+
+                    // Remove obstacles that passed the camera
+                    if (obstacles[i].position.z > 5) {
+                        scene.remove(obstacles[i]);
+                        obstacles.splice(i, 1);
+                        score += 10;
+                        document.getElementById('score').innerText = score;
+                    }
+                }
+
+                renderer.render(scene, camera);
+            }
+        }
+
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('game-over').style.display = 'block';
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            document.getElementById('score').innerText = score;
+            document.getElementById('game-over').style.display = 'none';
+            
+            // Clear obstacles
+            obstacles.forEach(obs => scene.remove(obs));
+            obstacles = [];
+            
+            currentLane = 1;
+            player.position.set(lanes[currentLane], 0.6, 0);
+            animate();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
